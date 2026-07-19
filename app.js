@@ -72,58 +72,50 @@ imageInput.addEventListener("change", (e) => {
 });
 
 // ---- Step 2: OCR via Tesseract.js ----
-async function runOCR(imageDataUrl) {
+function runOCR(imageDataUrl) {
   ocrSection.classList.remove("hidden");
   ocrLoading.classList.remove("hidden");
   ocrText.value = "";
   confirmTextBtn.classList.add("hidden");
 
-  try {
-    // Use the worker API directly so setParameters() actually takes effect —
-    // the simple Tesseract.recognize() shortcut ignores tessedit_char_whitelist.
-    const worker = await Tesseract.createWorker("eng", 1, {
-      logger: (m) => console.log(m),
-    });
+  Tesseract.recognize(imageDataUrl, "eng", {
+    logger: (m) => console.log(m), // progress logs, useful for demo/debugging
+  })
+    .then(({ data: { text } }) => {
+      const cleaned = cleanOcrText(text);
+      ocrText.value = cleaned || "";
+      ocrLoading.classList.add("hidden");
+      confirmTextBtn.classList.remove("hidden");
 
-    await worker.setParameters({
-      tessedit_char_whitelist:
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,()-%/:'\"",
-    });
-
-    const {
-      data: { text },
-    } = await worker.recognize(imageDataUrl);
-
-    await worker.terminate();
-
-    const cleaned = cleanOcrText(text);
-    ocrText.value = cleaned || "";
-    ocrLoading.classList.add("hidden");
-    confirmTextBtn.classList.remove("hidden");
-
-    if (!cleaned) {
+      if (!cleaned) {
+        ocrText.placeholder =
+          "Couldn't read this clearly. Please type the label text manually.";
+      }
+    })
+    .catch((err) => {
+      console.error("OCR error:", err);
+      ocrLoading.classList.add("hidden");
       ocrText.placeholder =
-        "Couldn't read this clearly. Please type the label text manually.";
-    }
-  } catch (err) {
-    console.error("OCR error:", err);
-    ocrLoading.classList.add("hidden");
-    ocrText.placeholder =
-      "Something went wrong reading the image. Please type the label text manually.";
-    confirmTextBtn.classList.remove("hidden");
-  }
+        "Something went wrong reading the image. Please type the label text manually.";
+      confirmTextBtn.classList.remove("hidden");
+    });
 }
 
-// Post-process OCR output: strip stray single-character "noise" lines
-// (common artifacts from icons/borders/backgrounds getting misread as text)
+// Post-process OCR output entirely in plain JS (no dependency on Tesseract's
+// internal whitelist API, which requires the more fragile worker setup).
+// 1. Strip any character that isn't a normal letter/number/basic punctuation.
+// 2. Drop lines that become empty or are just leftover junk after stripping.
 function cleanOcrText(rawText) {
+  const allowedCharsPattern = /[^A-Za-z0-9 .,()\-%/:'"\n]/g;
+
   return rawText
+    .replace(allowedCharsPattern, "") // remove disallowed characters entirely
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => {
       if (line.length === 0) return false;
-      // Drop lines that are just 1-2 junk characters (e.g. ".", "-", "™", "\"")
-      if (line.length <= 2 && !/[a-zA-Z0-9]/.test(line)) return false;
+      // Drop leftover junk lines with no real letters/numbers at all
+      if (!/[a-zA-Z0-9]/.test(line)) return false;
       return true;
     })
     .join("\n")
@@ -320,4 +312,4 @@ resetBtn.addEventListener("click", () => {
   ocrText.value = "";
   currentTranslatedText = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
-})
+});
