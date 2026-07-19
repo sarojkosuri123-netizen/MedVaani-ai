@@ -72,35 +72,46 @@ imageInput.addEventListener("change", (e) => {
 });
 
 // ---- Step 2: OCR via Tesseract.js ----
-function runOCR(imageDataUrl) {
+async function runOCR(imageDataUrl) {
   ocrSection.classList.remove("hidden");
   ocrLoading.classList.remove("hidden");
   ocrText.value = "";
   confirmTextBtn.classList.add("hidden");
 
-  Tesseract.recognize(imageDataUrl, "eng", {
-    logger: (m) => console.log(m), // progress logs, useful for demo/debugging
-    tessedit_char_whitelist:
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,()-%/:'\"",
-  })
-    .then(({ data: { text } }) => {
-      const cleaned = cleanOcrText(text);
-      ocrText.value = cleaned || "";
-      ocrLoading.classList.add("hidden");
-      confirmTextBtn.classList.remove("hidden");
-
-      if (!cleaned) {
-        ocrText.placeholder =
-          "Couldn't read this clearly. Please type the label text manually.";
-      }
-    })
-    .catch((err) => {
-      console.error("OCR error:", err);
-      ocrLoading.classList.add("hidden");
-      ocrText.placeholder =
-        "Something went wrong reading the image. Please type the label text manually.";
-      confirmTextBtn.classList.remove("hidden");
+  try {
+    // Use the worker API directly so setParameters() actually takes effect —
+    // the simple Tesseract.recognize() shortcut ignores tessedit_char_whitelist.
+    const worker = await Tesseract.createWorker("eng", 1, {
+      logger: (m) => console.log(m),
     });
+
+    await worker.setParameters({
+      tessedit_char_whitelist:
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,()-%/:'\"",
+    });
+
+    const {
+      data: { text },
+    } = await worker.recognize(imageDataUrl);
+
+    await worker.terminate();
+
+    const cleaned = cleanOcrText(text);
+    ocrText.value = cleaned || "";
+    ocrLoading.classList.add("hidden");
+    confirmTextBtn.classList.remove("hidden");
+
+    if (!cleaned) {
+      ocrText.placeholder =
+        "Couldn't read this clearly. Please type the label text manually.";
+    }
+  } catch (err) {
+    console.error("OCR error:", err);
+    ocrLoading.classList.add("hidden");
+    ocrText.placeholder =
+      "Something went wrong reading the image. Please type the label text manually.";
+    confirmTextBtn.classList.remove("hidden");
+  }
 }
 
 // Post-process OCR output: strip stray single-character "noise" lines
@@ -309,4 +320,4 @@ resetBtn.addEventListener("click", () => {
   ocrText.value = "";
   currentTranslatedText = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
-});
+})
