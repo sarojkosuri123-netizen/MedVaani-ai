@@ -147,21 +147,25 @@ translateBtn.addEventListener("click", async () => {
 async function translateText(text, targetLang) {
   if (targetLang === "en") return text; // no translation needed
 
-  const response = await fetch("https://libretranslate.de/translate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      q: text,
-      source: "en",
-      target: targetLang,
-      format: "text",
-    }),
-  });
+  // MyMemory Translation API — free, no API key required, reliable CORS support.
+  // Note: MyMemory has a ~500 character limit per request on the free tier,
+  // which is fine for medicine label text.
+  const langPair = `en|${targetLang}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+    text
+  )}&langpair=${langPair}`;
+
+  const response = await fetch(url);
 
   if (!response.ok) throw new Error("Translation API failed");
 
   const data = await response.json();
-  return data.translatedText;
+
+  if (!data.responseData || !data.responseData.translatedText) {
+    throw new Error("Translation API returned no result");
+  }
+
+  return data.responseData.translatedText;
 }
 
 // ---- Step 4: Warning detection + Danger Score ----
