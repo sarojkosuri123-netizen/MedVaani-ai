@@ -80,13 +80,16 @@ function runOCR(imageDataUrl) {
 
   Tesseract.recognize(imageDataUrl, "eng", {
     logger: (m) => console.log(m), // progress logs, useful for demo/debugging
+    tessedit_char_whitelist:
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,()-%/:'\"",
   })
     .then(({ data: { text } }) => {
-      ocrText.value = text.trim() || "";
+      const cleaned = cleanOcrText(text);
+      ocrText.value = cleaned || "";
       ocrLoading.classList.add("hidden");
       confirmTextBtn.classList.remove("hidden");
 
-      if (!text.trim()) {
+      if (!cleaned) {
         ocrText.placeholder =
           "Couldn't read this clearly. Please type the label text manually.";
       }
@@ -98,6 +101,22 @@ function runOCR(imageDataUrl) {
         "Something went wrong reading the image. Please type the label text manually.";
       confirmTextBtn.classList.remove("hidden");
     });
+}
+
+// Post-process OCR output: strip stray single-character "noise" lines
+// (common artifacts from icons/borders/backgrounds getting misread as text)
+function cleanOcrText(rawText) {
+  return rawText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (line.length === 0) return false;
+      // Drop lines that are just 1-2 junk characters (e.g. ".", "-", "™", "\"")
+      if (line.length <= 2 && !/[a-zA-Z0-9]/.test(line)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
 }
 
 // ---- Step 2 -> 3: confirm text, move to translation ----
