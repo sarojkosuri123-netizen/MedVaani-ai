@@ -66,10 +66,58 @@ imageInput.addEventListener("change", (e) => {
   reader.onload = (evt) => {
     imagePreview.src = evt.target.result;
     imagePreviewWrap.classList.remove("hidden");
-    runOCR(evt.target.result);
+
+    // Preprocess the image (grayscale + contrast boost + upscale) before OCR.
+    // This genuinely improves Tesseract's accuracy on real photos —
+    // small/low-contrast text becomes much more readable to the OCR engine.
+    preprocessImage(evt.target.result).then((processedDataUrl) => {
+      runOCR(processedDataUrl);
+    });
   };
   reader.readAsDataURL(file);
 });
+
+/**
+ * Preprocess an image for better OCR accuracy:
+ * 1. Upscale (helps with small/dense text)
+ * 2. Convert to grayscale
+ * 3. Boost contrast (push mid-tones toward pure black/white)
+ */
+function preprocessImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2; // upscale factor — helps small/dense label text
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext("2d");
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      const contrastFactor = 1.6; // >1 increases contrast
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Convert to grayscale using standard luminance weighting
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+        // Boost contrast around the midpoint (128)
+        let contrasted = (gray - 128) * contrastFactor + 128;
+        contrasted = Math.max(0, Math.min(255, contrasted));
+
+        data[i] = contrasted; // R
+        data[i + 1] = contrasted; // G
+        data[i + 2] = contrasted; // B
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", 0.95));
+    };
+    img.src = dataUrl;
+  });
+}
 
 // ---- Step 2: OCR via Tesseract.js ----
 function runOCR(imageDataUrl) {
@@ -313,3 +361,4 @@ resetBtn.addEventListener("click", () => {
   currentTranslatedText = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
+
