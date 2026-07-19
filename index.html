@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MedVaani AI — Medicine Label Translator</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>💊 MedVaani <span>AI</span></h1>
+    <p class="tagline">Read your medicine label, in your own language.</p>
+  </header>
+
+  <main class="container">
+
+    <!-- STEP 1: Image capture -->
+    <section id="capture-section" class="card">
+      <h2>Step 1: Capture Label</h2>
+      <p class="hint">Take a clear photo of the medicine strip or label.</p>
+
+      <input type="file" id="imageInput" accept="image/*" capture="environment" hidden />
+      <button id="captureBtn" class="btn-primary">📷 Take / Upload Photo</button>
+
+      <div id="imagePreviewWrap" class="hidden">
+        <img id="imagePreview" alt="Medicine label preview" />
+      </div>
+    </section>
+
+    <!-- STEP 2: OCR result + correction -->
+    <section id="ocr-section" class="card hidden">
+      <h2>Step 2: Check Extracted Text</h2>
+      <p class="hint">OCR isn't perfect — fix anything that looks wrong before translating.</p>
+      <div id="ocrLoading" class="loading hidden">
+        <div class="spinner"></div> Reading label...
+      </div>
+      <textarea id="ocrText" rows="5" placeholder="Extracted text will appear here..."></textarea>
+      <button id="confirmTextBtn" class="btn-primary hidden">✅ Looks Good — Continue</button>
+    </section>
+
+    <!-- STEP 3: Language + Translate -->
+    <section id="translate-section" class="card hidden">
+      <h2>Step 3: Choose Language</h2>
+      <select id="languageSelect">
+        <option value="te">Telugu (తెలుగు)</option>
+        <option value="hi">Hindi (हिन्दी)</option>
+        <option value="en">English</option>
+      </select>
+      <button id="translateBtn" class="btn-primary">🌐 Translate</button>
+      <div id="translateLoading" class="loading hidden">
+        <div class="spinner"></div> Translating...
+      </div>
+    </section>
+
+    <!-- STEP 4: Results -->
+    <section id="results-section" class="card hidden">
+      <h2>Step 4: Your Label, Explained</h2>
+
+      <div id="dangerBadge" class="danger-badge hidden"></div>
+
+      <div class="result-block">
+        <h3>Translated Text</h3>
+        <p id="translatedText"></p>
+      </div>
+
+      <div class="result-block" id="warningsBlock">
+        <h3>⚠️ Flagged Warnings</h3>
+        <ul id="warningsList"></ul>
+      </div>
+
+      <button id="speakBtn" class="btn-primary">🔊 Read Aloud</button>
+      <button id="resetBtn" class="btn-secondary">🔄 Scan Another Label</button>
+    </section>
+
+    <!-- Scan History -->
+    <section id="history-section" class="card">
+      <h2>📜 Scan History</h2>
+      <p class="hint">Past scans saved for this device (shared across all MedVaani users).</p>
+      <div id="historyLoading" class="loading hidden">
+        <div class="spinner"></div> Loading history...
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+      <button id="refreshHistoryBtn" class="btn-secondary">🔁 Refresh History</button>
+    </section>
+
+    <p class="disclaimer">
+      MedVaani AI is a label-reading assistant only — not a diagnostic or medical-advice tool.
+      Always consult a doctor or pharmacist for medical decisions.
+    </p>
+
+  </main>
+
+  <!-- Tesseract.js OCR (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

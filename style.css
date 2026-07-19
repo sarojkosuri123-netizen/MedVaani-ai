@@ -1,0 +1,250 @@
+:root {
+  --navy: #0b1f3a;
+  --teal: #1aa79a;
+  --teal-light: #e6f7f4;
+  --orange: #f2a93b;
+  --orange-light: #fdf3e2;
+  --text-dark: #13294b;
+  --text-muted: #5b6b82;
+  --danger: #d9534f;
+  --success: #2e9e6b;
+  --white: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f4f7fb;
+  color: var(--text-dark);
+}
+
+.app-header {
+  background: var(--navy);
+  color: var(--white);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.app-header h1 span {
+  color: var(--teal);
+}
+
+.tagline {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: -6px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.btn-primary, .btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: var(--teal);
+  color: var(--white);
+}
+
+.btn-primary:active {
+  opacity: 0.85;
+}
+
+.btn-secondary {
+  background: var(--teal-light);
+  color: var(--teal);
+}
+
+#imagePreviewWrap {
+  margin-top: 14px;
+  text-align: center;
+}
+
+#imagePreview {
+  max-width: 100%;
+  border-radius: 10px;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+textarea, select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d5dce6;
+  font-size: 0.95rem;
+  font-family: inherit;
+  margin-top: 8px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 10px 0;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--teal-light);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.result-block {
+  margin-bottom: 16px;
+}
+
+.result-block h3 {
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+#translatedText {
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+#warningsList {
+  padding-left: 20px;
+}
+
+#warningsList li {
+  margin-bottom: 6px;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+#warningsBlock.no-warnings #warningsList::before {
+  content: "No critical warnings detected — always double check with a pharmacist.";
+  color: var(--success);
+}
+
+.danger-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+}
+
+.danger-badge.low {
+  background: #e6f7ee;
+  color: var(--success);
+}
+
+.danger-badge.medium {
+  background: var(--orange-light);
+  color: #9a6300;
+}
+
+.danger-badge.high {
+  background: #fbe7e6;
+  color: var(--danger);
+}
+
+.disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 20px;
+  padding: 0 10px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.history-item {
+  background: #f7f9fc;
+  border-left: 4px solid var(--text-muted);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.history-item.low { border-left-color: var(--success); }
+.history-item.medium { border-left-color: var(--orange); }
+.history-item.high { border-left-color: var(--danger); }
+
+.history-item-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.history-lang {
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.history-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+}
+
+.history-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 10px 0;
+}
