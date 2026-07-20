@@ -396,7 +396,30 @@ speakBtn.addEventListener("click", () => {
 
   // Map our language codes to browser speech-synthesis locale tags
   const langMap = { te: "te-IN", hi: "hi-IN", en: "en-IN" };
-  utterance.lang = langMap[currentLangCode] || "en-IN";
+  const desiredLang = langMap[currentLangCode] || "en-IN";
+
+  const voices = speechSynthesis.getVoices();
+  const matchingVoice = voices.find((v) => v.lang === desiredLang);
+
+  if (matchingVoice) {
+    utterance.voice = matchingVoice;
+    utterance.lang = desiredLang;
+  } else {
+    // No installed voice for this language on this device/browser.
+    // Fall back to any available voice so something is still audible,
+    // and let the user know why it may not sound right.
+    utterance.lang = desiredLang;
+    if (voices.length > 0) {
+      console.warn(
+        `No installed voice found for ${desiredLang}. Falling back to default voice.`
+      );
+      alert(
+        `Your device doesn't have a ${
+          currentLangCode === "te" ? "Telugu" : currentLangCode === "hi" ? "Hindi" : "matching"
+        } voice installed for text-to-speech, so this may read using a different voice or accent. The translated text itself is still correct — you can add the language voice pack in your device's system settings for proper pronunciation.`
+      );
+    }
+  }
 
   speechSynthesis.cancel(); // stop any ongoing speech first
   speechSynthesis.speak(utterance);
