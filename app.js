@@ -29,6 +29,10 @@ const imageInput = document.getElementById("imageInput");
 const captureBtn = document.getElementById("captureBtn");
 const imagePreviewWrap = document.getElementById("imagePreviewWrap");
 const imagePreview = document.getElementById("imagePreview");
+const rotateBtn = document.getElementById("rotateBtn");
+
+let originalImageDataUrl = null; // keep the unrotated original so rotations don't compound errors
+let currentRotation = 0; // degrees: 0, 90, 180, 270
 
 const ocrSection = document.getElementById("ocr-section");
 const ocrLoading = document.getElementById("ocrLoading");
@@ -64,18 +68,58 @@ imageInput.addEventListener("change", (e) => {
 
   const reader = new FileReader();
   reader.onload = (evt) => {
-    imagePreview.src = evt.target.result;
+    originalImageDataUrl = evt.target.result;
+    currentRotation = 0;
+    imagePreview.src = originalImageDataUrl;
     imagePreviewWrap.classList.remove("hidden");
 
-    // Preprocess the image (grayscale + contrast boost + upscale) before OCR.
-    // This genuinely improves Tesseract's accuracy on real photos —
-    // small/low-contrast text becomes much more readable to the OCR engine.
-    preprocessImage(evt.target.result).then((processedDataUrl) => {
+    preprocessImage(originalImageDataUrl).then((processedDataUrl) => {
       runOCR(processedDataUrl);
     });
   };
   reader.readAsDataURL(file);
 });
+
+// ---- Rotate photo (fixes sideways/rotated label text) ----
+rotateBtn.addEventListener("click", () => {
+  if (!originalImageDataUrl) return;
+  currentRotation = (currentRotation + 90) % 360;
+
+  rotateImage(originalImageDataUrl, currentRotation).then((rotatedDataUrl) => {
+    imagePreview.src = rotatedDataUrl;
+    preprocessImage(rotatedDataUrl).then((processedDataUrl) => {
+      runOCR(processedDataUrl);
+    });
+  });
+});
+
+/**
+ * Rotate an image by a given angle (0/90/180/270) using Canvas.
+ */
+function rotateImage(dataUrl, degrees) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (degrees === 90 || degrees === 270) {
+        canvas.width = img.height;
+        canvas.height = img.width;
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      resolve(canvas.toDataURL("image/jpeg", 0.95));
+    };
+    img.src = dataUrl;
+  });
+}
 
 /**
  * Preprocess an image for better OCR accuracy:
@@ -217,9 +261,48 @@ translateBtn.addEventListener("click", async () => {
 async function translateText(text, targetLang) {
   if (targetLang === "en") return text; // no translation needed
 
-  // MyMemory Translation API — free, no API key required, reliable CORS support.
-  // Note: MyMemory has a ~500 character limit per request on the free tier,
-  // which is fine for medicine label text.
+  // MyMemory's free tier has a ~500 character limit PER REQUEST.
+  // Real medicine labels are often longer than that, so we split the text
+  // into smaller chunks (by line, then by length if needed), translate each
+  // chunk separately, and join the results back together.
+  const chunks = splitTextIntoChunks(text, 450);
+
+  const translatedChunks = [];
+  for (const chunk of chunks) {
+    const translated = await translateChunk(chunk, targetLang);
+    translatedChunks.push(translated);
+  }
+
+  return translatedChunks.join(" ");
+}
+
+function splitTextIntoChunks(text, maxLength) {
+  const lines = text.split("\n").filter((l) => l.trim().length > 0);
+  const chunks = [];
+  let current = "";
+
+  for (const line of lines) {
+    if ((current + " " + line).trim().length > maxLength) {
+      if (current) chunks.push(current.trim());
+      current = line;
+    } else {
+      current = (current + " " + line).trim();
+    }
+  }
+  if (current) chunks.push(current.trim());
+
+  // Safety net: if a single line itself is longer than maxLength, hard-split it
+  return chunks.flatMap((chunk) => {
+    if (chunk.length <= maxLength) return [chunk];
+    const pieces = [];
+    for (let i = 0; i < chunk.length; i += maxLength) {
+      pieces.push(chunk.slice(i, i + maxLength));
+    }
+    return pieces;
+  });
+}
+
+async function translateChunk(text, targetLang) {
   const langPair = `en|${targetLang}`;
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
     text
@@ -235,7 +318,22 @@ async function translateText(text, targetLang) {
     throw new Error("Translation API returned no result");
   }
 
-  return data.responseData.translatedText;
+  const result = data.responseData.translatedText;
+
+  // MyMemory sometimes returns an HTTP 200 "success" response that actually
+  // contains an error message as the "translation" (e.g. length limit exceeded,
+  // invalid language pair, etc). Detect these disguised errors and treat them
+  // as real failures so the app's fallback logic kicks in properly.
+  const looksLikeApiError =
+    /QUERY LENGTH LIMIT EXCEEDED|INVALID LANGUAGE PAIR|IS AN INVALID|AMOUNT OF WORDS LIMIT EXCEEDED/i.test(
+      result
+    );
+
+  if (looksLikeApiError) {
+    throw new Error(`MyMemory API error: ${result}`);
+  }
+
+  return result;
 }
 
 // ---- Step 4: Warning detection + Danger Score ----
@@ -361,4 +459,3 @@ resetBtn.addEventListener("click", () => {
   currentTranslatedText = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
-
